@@ -1,0 +1,11 @@
+{
+  "doc_id": "team_roster",
+  "source": "demo/team_roster.pdf",
+  "status": "ok",
+  "seconds": 0.0,
+  "n_tables": 1,
+  "table_ids": [
+    "team_roster_p1_t1"
+  ],
+  "note": "Hand-written demo data for Member 3 (API/Q&A). Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`."
+}

@@ -4,3 +4,7 @@ reportlab
 pdfplumber
 pytest
 pydantic>=2
+fastapi
+uvicorn
+httpx
+python-multipart

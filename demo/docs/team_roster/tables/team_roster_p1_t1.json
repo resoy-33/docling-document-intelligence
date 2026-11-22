@@ -1,0 +1,27 @@
+{
+  "doc_id": "team_roster",
+  "table_id": "team_roster_p1_t1",
+  "page": 1,
+  "columns": [
+    "Name",
+    "Age",
+    "City"
+  ],
+  "rows": [
+    [
+      "Ali",
+      30,
+      "Tunis"
+    ],
+    [
+      "Sara",
+      29,
+      "Sfax"
+    ],
+    [
+      "Mouna",
+      34,
+      "Sousse"
+    ]
+  ]
+}

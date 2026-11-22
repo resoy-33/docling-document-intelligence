@@ -1,0 +1,31 @@
+{
+  "doc_id": "broken_budget",
+  "table_id": "broken_budget_p2_t1",
+  "page": 2,
+  "columns": [
+    "Item",
+    "Q1",
+    "Q2",
+    "Total"
+  ],
+  "rows": [
+    [
+      "A",
+      10,
+      20,
+      30
+    ],
+    [
+      "B",
+      5,
+      5,
+      10
+    ],
+    [
+      "Total",
+      15,
+      25,
+      99
+    ]
+  ]
+}
