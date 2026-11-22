@@ -1,0 +1,9 @@
+# Light setup for Member 3 (api/ + qa/): no Docling models, no 5 GB download.
+# Use this to run the demo and the tests on any PC.
+pandas
+pydantic>=2
+pytest
+fastapi
+uvicorn
+httpx
+python-multipart

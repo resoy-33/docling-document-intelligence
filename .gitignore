@@ -9,3 +9,9 @@ cli_*/
 t[0-9]/
 comparison_report.md
 *.pyc
+uploads/
+validation_*.json
+*.log
+.env
+.coverage
+htmlcov/

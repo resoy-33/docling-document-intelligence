@@ -1,0 +1,35 @@
+{
+  "doc_id": "regions_2026",
+  "table_id": "regions_2026_p1_t1",
+  "page": 1,
+  "columns": [
+    "Region",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Total"
+  ],
+  "rows": [
+    [
+      "North",
+      100,
+      110,
+      120,
+      330
+    ],
+    [
+      "South",
+      90,
+      95,
+      100,
+      285
+    ],
+    [
+      "Total",
+      190,
+      205,
+      220,
+      615
+    ]
+  ]
+}

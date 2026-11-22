@@ -22,12 +22,80 @@ Official reference: https://github.com/docling-project/docling
 |---|---|
 | `engine/convert.py` on 3 sample PDFs with Docling 2.151.1 on Windows | Run by Yosr: 1 table each for `sample_simple_table`, `sample_two_column_table` and `sample_wrong_total` |
 | `sample_wrong_total_long_title.pdf` | Docling found **0 tables** (normal, OCR, accurate, OCR+accurate), and the CLI labelled the table as an image. Cause not established. Kept as a real failure case |
-| 55 `pytest` tests (no AI models needed) | Pass in the author's test environment. Include a real Docling run on an Excel file and on a corrupt Word file |
+| `pytest` suite (121 collected) | **119 passed, 2 skipped** on Windows/Python 3.12 on 2026-11-22 without Docling. The 2 skips are Member 1's Docling-only tests. |
 | Word, Excel and HTML input (real Docling run, 3 files) | Worked in the author's test environment: 1 table each; number formats parsed. Not tested on your PCs |
 | PDF retry cascade (fast, accurate, OCR + accurate) and the AI vision option `--vlm` | Logic tested with fake converters only. The real PDF cascade and `--vlm` have **not** been run |
 | Scanned PDFs, borderless tables, merged cells, images, PowerPoint | **Not tested** |
 | `setup_windows.bat`, `run_all.bat` | Written but **not tested on Windows**. If one fails, use the manual commands below |
 | Table content correctness across tools | **Not measured yet**: needs Member 2's validator and harder PDFs |
+| **Member 3: chunking, API, grounded Q&A** | Implemented and tested: `119 passed, 2 skipped` for the whole suite; real uvicorn server checked on `/health`, `/ask`, `/tables/{id}`, `/validate`, `/openapi.json` |
+| **Member 3: HybridChunker** | Code path implemented; **not executed** because Docling was not installed on the test machine. The labelled Markdown fallback ran instead (`chunking_method` is exposed by the API) |
+| **Member 3: real Docling output through the API** | **Not run here**. Documented: `python -m engine.convert samples --out output`, then `set DOCLING_OUTPUT_DIR=output` |
+| **Member 3: demo corpus** | Hand-written for API/Q&A tests, **not** Docling output; stated in `demo/docs/README.md` |
+
+---
+
+## Member 3 quick start (API + grounded Q&A, no Docling download)
+
+The `api/` and `qa/` folders are Member 3's part. They can be run on a light setup because
+the demo output in `demo/docs/` is hand-written (clearly labelled, **not** Docling output).
+This lets you test chunking, retrieval, refusal and the API before installing the 5 GB
+Docling models.
+
+```bat
+cd C:\path\to\docling-document-intelligence
+setup_member3.bat
+run_demo_api.bat
+```
+
+`setup_member3.bat` creates `.venv`, installs `requirements-api.txt`, generates
+`demo/docs/`, and runs the tests. `run_demo_api.bat` serves the API at
+**http://127.0.0.1:8000** with Swagger at **http://127.0.0.1:8000/docs**.
+
+Manual commands:
+
+```bat
+py -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r requirements-api.txt
+python demo\make_demo.py
+python -m pytest -q
+set DOCLING_OUTPUT_DIR=demo\docs
+python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Demo questions (the API returns a citation or a refusal with a reason):
+
+| Question | Expected |
+|---|---|
+| `What were Laptops sales in Q1?` (`doc_id=sales_2026`) | `120`, page 1, table `sales_2026_p1_t1` |
+| `What is the grand total in the sales report?` | `1250` |
+| `Which product sold the most in Q1?` | `Phones`, `200` |
+| `What is the total in the broken budget?` | **refused**: harness found `ROW_TOTAL_MISMATCH` / `COLUMN_TOTAL_MISMATCH` |
+| `What does the scanned report say?` (`doc_id=scanned_report`) | **refused**: 0 tables is a failure |
+
+CLI without a server:
+
+```bat
+python -m qa.demo --root demo/docs --list
+python -m qa.demo --root demo/docs --question "What were Laptops sales in Q1?"
+```
+
+To use real Docling output instead of the demo:
+
+```bat
+pip install -r requirements.txt
+python -m engine.convert samples --out output
+set DOCLING_OUTPUT_DIR=output
+python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Then `GET /health` reports `chunking_method` for each document. `"hybrid"` means
+HybridChunker ran; `"markdown"` means the documented fallback ran because Docling was not
+installed or the Docling JSON could not be reloaded. The Q&A policy is the same in both
+cases: only `passed` tables can support an answer.
+
+More detail: `qa/README.md`, `api/README.md`, and `docs/MEMBER3_SLIDES_GUIDE.md`.
 
 ---
 
@@ -38,13 +106,13 @@ Requirements: **Python 3.12** (3.10 or newer works), internet for the first run,
 **Option A: two double-clicks**
 
 1. Unzip the project. Open the **inner** folder that contains `README.md` (you may see `docling_team_project\docling_team_project`).
-2. Double-click `setup_windows.bat` (5-15 minutes). It must end with `55 passed`.
+2. Double-click `setup_windows.bat` (5-15 minutes). It must end green (no test failures).
 3. Double-click `run_all.bat`. The first run downloads the AI models.
 
 **Option B: manual commands (use this if a .bat fails)**
 
 ```
-cd C:\path\to\docling_team_project
+cd C:\path\to\docling-document-intelligence
 py -m venv .venv
 .venv\Scripts\activate.bat
 python -m pip install --upgrade pip
@@ -55,7 +123,7 @@ python compare_pdfplumber.py samples --out output_baseline
 python compare_report.py
 ```
 
-Replace `C:\path\to\docling_team_project` with the real folder. You must see `(.venv)` at the start of the
+Replace `C:\path\to\docling-document-intelligence` with the real folder. You must see `(.venv)` at the start of the
 line before `python` or `pip`. Open a new terminal later? Repeat the `cd` and the `activate.bat` lines.
 
 ### Which files does it accept, and what does it do when something goes wrong?
@@ -137,6 +205,7 @@ fixtures/             5 hand-written tables (2 good, 3 broken) to build against
 samples/              4 sample PDFs (made by make_samples.py)
 harness/  tests/      Member 2: checksum validator and its pytest suite (tests/ already holds Member 1's tests)
 api/  qa/             Member 3: FastAPI endpoints, chunking, grounded Q&A
+demo/docs/            Member 3: hand-written output for API tests/demo (NOT Docling output)
 automation/           Member 4: watch-folder / n8n, packaging, demo
 docs/                 slide guide for Member 1
 compare_pdfplumber.py baseline extractor (same output format)
@@ -154,7 +223,10 @@ setup_windows.bat, run_all.bat   Windows helpers
 | First run is very slow | Docling is downloading its models, once. Wait |
 | `python` not found | Reinstall Python 3.12 with "Add python.exe to PATH" ticked, open a new terminal |
 | `No module named 'encodings'` | Broken Python install: remove old Python versions and clean the PATH, then reinstall |
-| 0 tables for a PDF | Expected for `sample_wrong_total_long_title.pdf`. The engine already retries; for others try `--vlm` and report it |
+| `No module named 'fastapi'` (Member 3) | The light dependencies are not installed: `pip install -r requirements-api.txt` |
+| `/convert` returns `503 Docling is not installed` | Expected on the light setup. Use `demo/docs`, or `pip install -r requirements.txt` and rerun the engine |
+| `GET /health` shows `chunking_method: markdown` | Docling is not installed (or `.docling.json` cannot be reloaded), so the documented fallback ran. Install Docling and regenerate `output/` for HybridChunker |
+| `0 tables for a PDF` | Expected for `sample_wrong_total_long_title.pdf`. The engine already retries; for others try `--vlm` and report it |
 | `failed` for a file | Read the `ERROR:` line. Corrupt, password-protected or unsupported files cannot be read; the other files are still processed |
 
 ## Rules from the professor
