@@ -15,3 +15,8 @@ validation_*.json
 .env
 .coverage
 htmlcov/
+
+.venv/
+__pycache__/
+.pytest_cache/
+automation/results/
