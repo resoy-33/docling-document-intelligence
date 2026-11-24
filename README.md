@@ -25,7 +25,7 @@ Objectives:
 |---|---|
 | Docling conversion with an automatic retry cascade (fast → accurate → OCR + accurate) | `engine/convert.py` |
 | Scanned PDFs and images (PNG / JPG / TIFF) handled through OCR | `engine/convert.py` |
-| Table export to CSV, JSON, Markdown and Excel; number cleaning (`1 234,56`, `(120)`, `$40`) | `engine/export.py`, `engine/contract.py` |
+| Table export to CSV, JSON, Markdown and Excel; number cleaning (`1 234,56`, `1.234.567`, `(120)`, `$40`) | `engine/export.py`, `engine/contract.py` |
 | Checksum harness (Pydantic v2): row / column totals, empty cells, ragged rows, text in numeric columns, merged-layout detection → **PASS** or **FLAGGED** with a reason | `harness/` |
 | Streamlit inspector: upload and convert, page image with layout boxes and reading order, tables with verdicts, downloads, Q&A | `inspector/` |
 | FastAPI service with Swagger docs | `api/` |
@@ -64,7 +64,8 @@ samples/       9 sample documents used in the demo
 fixtures/      5 hand-written tables (2 valid, 3 broken) for the harness tests
 demo/          hand-written engine-shaped data for the API / Q&A tests (not Docling output)
 tests/         pytest suite
-docs/          slide guides (and the project brief, kept locally)
+docs/          project brief (kept locally, never published: see .gitignore)
+screenshots/   screenshots of the running app for the slides and the submission
 make_samples.py   regenerates the 4 generated sample PDFs
 *.bat             Windows helpers (setup, tests, inspector, API, watch-folder, full comparison)
 ```
@@ -124,7 +125,7 @@ The inspector also offers JSON, CSV, Markdown and Excel downloads for each table
 run_tests.bat            # or: python -m pytest -q
 ```
 
-With Docling installed: **149 passed**. On the light install the tests that run the real Docling
+With Docling installed, every test passes. On the light install the tests that run the real Docling
 models (`tests/test_real_docling.py` and two in `test_robustness.py`) are skipped.
 
 ## Samples and demo
@@ -161,6 +162,4 @@ then drop the two sample PDFs into the watch-folder.
 More detail: [`api/README.md`](api/README.md), [`qa/README.md`](qa/README.md),
 [`harness/README.md`](harness/README.md), [`inspector/README.md`](inspector/README.md),
 [`automation/README.md`](automation/README.md).
-Presentation guides: [`docs/MEMBER1_SLIDES_GUIDE.md`](docs/MEMBER1_SLIDES_GUIDE.md),
-[`docs/MEMBER3_SLIDES_GUIDE.md`](docs/MEMBER3_SLIDES_GUIDE.md).
 Docling: https://github.com/docling-project/docling

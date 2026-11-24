@@ -9,7 +9,7 @@ Then open http://127.0.0.1:8000/docs for the interactive OpenAPI page.
 
 Endpoints required by the project:
     POST /convert       upload a file (multipart) and convert it with the engine
-    GET  /tables/{id}   one table + its the harness verdict + usability
+    GET  /tables/{id}   one table + its harness verdict + usability
     POST /ask           grounded answer, or a refusal with the reason
 
 Extra endpoints for the integration/demo:

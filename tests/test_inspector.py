@@ -128,3 +128,9 @@ def test_streamlit_app_handles_docx_without_page_image(tmp_path, monkeypatch):
     assert not app.exception
     assert any("no page image" in info.value for info in app.info)
     assert any("PASS" in m.value for m in app.markdown)
+
+
+def test_reading_order_ignores_body_and_malformed_refs():
+    doc = {"body": {"children": [{"$ref": "#/body"}, {"$ref": "#/texts/0"}, {"$ref": "#/groups/9"}]},
+           "texts": [{}], "groups": []}
+    assert reading_order(doc) == {"#/texts/0": 0}

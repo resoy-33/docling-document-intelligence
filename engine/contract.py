@@ -27,15 +27,17 @@ _SPACE_GROUPED = re.compile(r"^\d{1,3}( \d{3})+([.,]\d+)?$")  # 1 234  1 234,56
 _EU_GROUPED = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")     # 1.234,56
 _COMMA_DECIMAL = re.compile(r"^\d+,\d+$")                # 3,14  (not exactly 3 decimals)
 _BRACKET_MINUS = re.compile(r"^\(\s*[-−–]\s*\)\s*(.+)$")  # (-) 100.000
+_EU_THOUSANDS = re.compile(r"^\d{1,3}(\.\d{3}){2,}$")       # 1.234.567 (2+ dot groups, no decimals)
 
 
 def parse_number(text: str):
     """Return an int/float for a number written in a common format, else None.
 
-    Handled: 1200, 1,200, 1,200.50, 1 234,56, 1.234,56, 3,14, -5, (120) = -120, (-) 100 = -100,
-    and a leading/trailing currency sign ($ EUR GBP).
-    NOT handled on purpose: percentages ("12%") and text with units ("5 TND"): they stay text.
-    Ambiguity: "1,500" is read as one thousand five hundred (comma + exactly 3 digits = thousands).
+    Handled: 1200, 1,200, 1,200.50, 1 234,56, 1.234,56, 1.234.567, 3,14, -5, (120) = -120,
+    (-) 100 = -100, and a leading/trailing currency sign ($ EUR GBP).
+    NOT handled on purpose: a lone dash "-" (accounting "nil") stays text, and percentages ("12%") and text with units ("5 TND"): they stay text.
+    Ambiguity: "1,500" is read as one thousand five hundred (comma + exactly 3 digits = thousands),
+    but "1.500" stays 1.5 (a single dot group is read as a decimal point).
     """
     s = text.strip()
     for ch in _SPACES:
@@ -60,6 +62,8 @@ def parse_number(text: str):
         number = float(s.replace(",", ""))
     elif _SPACE_GROUPED.match(s):
         number = float(s.replace(" ", "").replace(",", "."))
+    elif _EU_THOUSANDS.match(s):
+        number = float(s.replace(".", ""))
     elif _EU_GROUPED.match(s):
         number = float(s.replace(".", "").replace(",", "."))
     elif _COMMA_DECIMAL.match(s):

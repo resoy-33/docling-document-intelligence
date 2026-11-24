@@ -55,7 +55,7 @@ class Chunk(BaseModel):
 
 
 class TableVerdict(BaseModel):
-    """the harness verdict, flattened for the API and for chunk metadata."""
+    """The harness verdict, flattened for the API and for chunk metadata."""
 
     table_id: str
     doc_id: str

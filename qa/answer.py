@@ -2,7 +2,7 @@
 
 The rule is simple and non-negotiable:
 
-    A numeric answer may only be built from a table whose the harness verdict is `passed`.
+    A numeric answer may only be built from a table whose harness verdict is `passed`.
 
 The default answerer is **extractive**: it finds a cell, a row, a column or an aggregate
 inside the validated table and quotes the exact cells it used.  It never invents prose
@@ -239,12 +239,18 @@ def _as_number(value) -> float | None:
 
 
 def _allowed_numbers(table: TableResult) -> set[float]:
+    """Every number written in the table: numeric cells, and numbers inside headers and
+    text cells (a header "31/12/2024" or a cell "12%"), since answers quote those too."""
     allowed: set[float] = set()
+    for text in table.columns:
+        allowed.update(numbers_in_text(str(text)))
     for row in table.rows:
         for value in row:
             number = _as_number(value)
             if number is not None and math.isfinite(number):
                 allowed.add(number)
+            elif isinstance(value, str):
+                allowed.update(numbers_in_text(value))
     return allowed
 
 
@@ -407,7 +413,8 @@ def _answer_from_table(
 
     # 2. multiple row labels ("compare A and B") — before the single-row branch
     if wants_compare and len(rows) >= 2 and numeric_columns:
-        target = column if column is not None else (total_col or numeric_columns[-1])
+        target = column if column is not None else (
+            total_col if total_col is not None else numeric_columns[-1])
         parts = [
             f"{_row_label(table, index)}: {_fmt_cell(table.rows[index][target])}"
             for index, _ in rows
@@ -431,7 +438,7 @@ def _answer_from_table(
             warnings, retrieved,
         )
 
-    # 3. one row: its values, or its total
+    # 4. one row: its values, or its total
     if row is not None:
         if wants_total:
             if total_col is not None and total_col < len(table.rows[row]):
@@ -469,7 +476,7 @@ def _answer_from_table(
             warnings, retrieved,
         )
 
-    # 4. one column: average, max/min, total, or the list of values
+    # 5. one column: average, max/min, total, or the list of values
     if column is not None:
         values = _column_values(table, column, data_rows)
         if wants_average and values:
@@ -529,7 +536,7 @@ def _answer_from_table(
                 warnings, retrieved,
             )
 
-    # 5. max/min without an explicit column: use the Total column or the last numeric one
+    # 6. max/min without an explicit column: use the Total column or the last numeric one
     if (wants_max or wants_min) and numeric_columns:
         target = total_col if total_col in numeric_columns else numeric_columns[-1]
         values = _column_values(table, target, data_rows)
@@ -546,7 +553,7 @@ def _answer_from_table(
                 warnings, retrieved,
             )
 
-    # 6. totals: grand total, the Total row, or computed column totals
+    # 7. totals: grand total, the Total row, or computed column totals
     if wants_total:
         if total_row is not None:
             if grand and total_col is not None and total_col < len(table.rows[total_row]):

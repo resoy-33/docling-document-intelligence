@@ -15,6 +15,9 @@ FIXTURES = sorted(Path(__file__).parent.parent.joinpath("fixtures").glob("*.json
     ("12", 12), ("1,200", 1200), ("3.5", 3.5), ("  7 ", 7),
     ("Total", "Total"), ("", None), (None, None), (float("nan"), None),
     (4.0, 4), (2.5, 2.5),
+    # formats seen in the BIAT annual report and other French/Tunisian statements
+    ("2 776 490", 2776490), ("1.234.567", 1234567),
+    ("1.500", 1.5), ("12%", "12%"), ("5 TND", "5 TND"),
 ])
 def test_clean_cell(raw, expected):
     assert clean_cell(raw) == expected

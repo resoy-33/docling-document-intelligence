@@ -56,11 +56,14 @@ def _walk(node: dict, doc: dict, seen: list[str]) -> None:
         ref = child.get("$ref") if isinstance(child, dict) else None
         if not ref:
             continue
+        parts = ref.split("/")
+        if len(parts) != 3 or not parts[2].isdigit():
+            continue  # "#/body" or an unexpected ref: not a layout item
         seen.append(ref)
-        _, collection, index = ref.split("/")
-        if collection in ("groups", "body"):
-            group = doc.get(collection, [])[int(index)] if collection == "groups" else doc["body"]
-            _walk(group, doc, seen)
+        _, collection, index = parts
+        groups = doc.get("groups", [])
+        if collection == "groups" and int(index) < len(groups):
+            _walk(groups[int(index)], doc, seen)
 
 
 def reading_order(doc: dict) -> dict[str, int]:

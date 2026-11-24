@@ -1,4 +1,4 @@
-"""the Q&A layer grounded Q&A tests.
+"""Grounded Q&A tests.
 
 The most important tests are the refusal tests: a table that fails the harness must never
 support an answer, and an answer must never contain a number that is not in its cited
@@ -195,3 +195,42 @@ def test_llm_exception_falls_back(corpus):
     answer = ask(corpus, "What were Laptops sales in Q1?", llm=broken_llm)
     assert not answer.refused and "120" in answer.answer
     assert any("LLM call failed" in warning for warning in answer.warnings)
+
+
+# ------------------------------------------------------- numbers outside numeric cells
+def _one_table_corpus(tmp_path, columns, rows, doc_id="doc"):
+    import json
+
+    folder = tmp_path / doc_id / "tables"
+    folder.mkdir(parents=True)
+    table = {"doc_id": doc_id, "table_id": f"{doc_id}_p1_t1", "page": 1,
+             "columns": columns, "rows": rows}
+    (folder / f"{doc_id}_p1_t1.json").write_text(json.dumps(table), encoding="utf-8")
+    (tmp_path / doc_id / "summary.json").write_text(json.dumps({"status": "ok"}), encoding="utf-8")
+    return load_corpus(tmp_path, prefer_hybrid=False)
+
+
+def test_date_header_is_not_a_grounding_failure(tmp_path):
+    # Real financial statements (BIAT) use dates as column headers.
+    corpus = _one_table_corpus(
+        tmp_path, ["Rubrique", "31/12/2024", "31/12/2023"],
+        [["Crédits documentaires", 1081217, 899073], ["Garanties reçues", 5151238, 5316610]],
+    )
+    answer = ask(corpus, "Crédits documentaires au 31/12/2024", doc_id="doc")
+    assert not answer.refused, answer.reason
+    assert "1081217" in answer.answer
+
+
+def test_number_inside_a_text_cell_is_grounded(tmp_path):
+    corpus = _one_table_corpus(tmp_path, ["Item", "Rate"], [["Laptops", "12%"], ["Phones", "8%"]])
+    answer = ask(corpus, "What is the Laptops rate?", doc_id="doc")
+    assert not answer.refused, answer.reason
+    assert "12%" in answer.answer
+
+
+def test_header_numbers_do_not_let_a_made_up_number_through(tmp_path):
+    corpus = _one_table_corpus(tmp_path, ["Item", "2024"], [["Laptops", 120]])
+    answer = ask(corpus, "Laptops 2024", doc_id="doc",
+                 llm=lambda prompt: "Laptops sold 999 units in 2024.")
+    assert answer.method == "extractive"
+    assert any("999" in w for w in answer.warnings)
