@@ -1,109 +1,166 @@
-# Layout-Aware Document Intelligence with IBM Docling
+# Layout-Aware Document Intelligence & Table Structure Reconstruction with IBM Docling
 
-Project 20 (ISG Tunis, AI Engineering & Software Architecture). A pipeline that turns complex
-PDF / DOCX / scanned documents into **verified tables**, lets you inspect the layout boxes, and
-answers questions **only** from tables that passed deterministic checksum checks.
+DS1 Project 20. A Python pipeline that converts complex documents (digital PDFs, scanned PDFs,
+images, Word files) into **structured, verified tables**, shows how the document layout was
+understood, and answers questions **only** from tables that passed deterministic checks.
+
+## Problem and objectives
+
+Tables in reports and invoices are easy for humans to read but hard for software: multi-column
+layouts, merged cells, scanned pages and OCR errors all produce tables that *look* plausible but
+contain wrong numbers. A question-answering system built on such tables can confidently return a
+wrong value.
+
+Objectives:
+
+1. Convert documents with IBM Docling (layout analysis + TableFormer table structure + OCR).
+2. Export every table to machine-readable formats (DataFrame, CSV, JSON, Markdown, Excel).
+3. Verify each table with deterministic checksum rules (row totals, column totals, structure).
+4. Visualise the detected layout (bounding boxes, reading order) to explain the result.
+5. Automate the pipeline and answer questions only from verified tables, refusing otherwise.
+
+## Main features
+
+| Feature | Where |
+|---|---|
+| Docling conversion with an automatic retry cascade (fast → accurate → OCR + accurate) | `engine/convert.py` |
+| Scanned PDFs and images (PNG / JPG / TIFF) handled through OCR | `engine/convert.py` |
+| Table export to CSV, JSON, Markdown and Excel; number cleaning (`1 234,56`, `(120)`, `$40`) | `engine/export.py`, `engine/contract.py` |
+| Checksum harness (Pydantic v2): row / column totals, empty cells, ragged rows, text in numeric columns, merged-layout detection → **PASS** or **FLAGGED** with a reason | `harness/` |
+| Streamlit inspector: upload and convert, page image with layout boxes and reading order, tables with verdicts, downloads, Q&A | `inspector/` |
+| FastAPI service with Swagger docs | `api/` |
+| Chunking (Docling HybridChunker, Markdown fallback), BM25 retrieval, grounded extractive answers with citations, refusal on flagged tables | `qa/` |
+| Watch-folder automation: drop a file → convert → verdict → answer or refusal | `automation/` |
+| Baseline comparison with pdfplumber, digital vs scanned comparison | `baseline/` |
+
+## Technologies
+
+Python 3.12 · IBM Docling 2.151.1 (layout model, TableFormer, OCR) · pandas · Pydantic v2 ·
+FastAPI + Uvicorn · Streamlit · pypdfium2 + Pillow (page rendering) · openpyxl (Excel) ·
+watchdog (watch-folder) · pdfplumber (baseline) · pytest.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  A[PDF / DOCX / image] --> B[Docling: layout model + TableFormer + OCR fallback]
+  A[PDF / DOCX / image] --> B[Docling: layout + TableFormer + OCR fallback]
   B --> C[DoclingDocument JSON + Markdown]
-  C --> D[Tables as contract JSON / CSV / XLSX]
-  D --> E[Harness: row / column checksums]
+  C --> D[Tables: contract JSON / CSV / XLSX / Markdown]
+  D --> E[Harness: checksum rules]
   E -->|PASS| F[Chunking + grounded Q&A]
   E -->|FLAGGED| G[Refusal with reason]
-  C --> H[Inspector: boxes + reading order]
+  C --> H[Inspector: layout boxes + reading order]
 ```
 
-## Folder map
+```
+engine/        conversion (convert.py), number cleaning (contract.py), layout boxes (boxes.py), exports (export.py)
+harness/       checksum rules (checks.py), Pydantic models (models.py), CLI (validate.py)
+inspector/     Streamlit app (app.py) and page rendering (overlay.py)
+api/           FastAPI application
+qa/            chunking, retrieval, grounded answering
+automation/    watch_folder.py, inbox/ (files in), results/ (API responses out, generated)
+baseline/      pdfplumber baseline, comparison report, digital-vs-scan comparison
+samples/       9 sample documents used in the demo
+fixtures/      5 hand-written tables (2 valid, 3 broken) for the harness tests
+demo/          hand-written engine-shaped data for the API / Q&A tests (not Docling output)
+tests/         pytest suite
+docs/          slide guides (and the project brief, kept locally)
+make_samples.py   regenerates the 4 generated sample PDFs
+*.bat             Windows helpers (setup, tests, inspector, API, watch-folder, full comparison)
+```
 
-| Folder / file | Role |
-|---|---|
-| `engine/` | `convert.py` Docling pipeline + retry cascade (fast → accurate → OCR); `contract.py` number cleaning; `boxes.py` layout boxes and reading order; `export.py` CSV / JSON / Markdown / XLSX |
-| `harness/` | checksum validator (Pydantic v2): row sums, column sums, empty cells, ragged rows |
-| `inspector/` | Streamlit inspector (`app.py`, `overlay.py`): upload + convert, page with layout boxes, tables with PASS / FLAGGED, downloads, Q&A |
-| `api/`, `qa/` | FastAPI service, chunking (HybridChunker, Markdown fallback), grounded Q&A with refusal |
-| `automation/` | watch-folder: file dropped in `inbox/` → API → verdict → answer or refusal |
-| `baseline/` | pdfplumber baseline and comparison report (for the comparison matrix) |
-| `samples/`, `fixtures/` | sample documents (generated PDFs, a real invoice, its scanned version as PDF and JPEG, an annual report, the Docling paper) and 5 hand-written tables |
-| `demo/` | **hand-written** test data for the API and Q&A tests (not Docling output) |
-| `tests/` | pytest suite (`test_real_docling.py` runs the real models end to end; skipped without Docling) |
-| `compare_digital_vs_scan.py` | one-off script for the slides: same invoice, digital PDF vs scanned PDF (full-page OCR) |
+Every table is stored in one JSON contract shared by all components:
 
-## Install (Windows)
+```json
+{"doc_id": "sample_simple_table", "table_id": "sample_simple_table_p1_t1", "page": 1,
+ "columns": ["Item", "Q1", "Q2", "Q3", "Total"],
+ "rows": [["Laptops", 120, 135, 150, 405], ["Total", 400, 410, 440, 1250]]}
+```
 
-Needs Python 3.10+ (3.12 recommended). Docling downloads about 5 GB of models on the first conversion.
+## Installation (Windows)
+
+Requirements: Python 3.10+ (3.12 recommended), about 5 GB of free disk, internet on the first run
+(Docling downloads its models once).
 
 ```powershell
-setup.bat full     # real Docling  (or: setup.bat   for the light install without Docling)
+cd "C:\path\to\project"
+setup.bat full        # creates .venv, installs requirements.txt, runs the tests
 ```
 
-Manual: `py -m venv .venv`, `.venv\Scripts\Activate.ps1` (PowerShell, not `activate.bat`),
-`pip install -r requirements.txt`.
+`setup.bat` without `full` installs the light requirements (`requirements-api.txt`): API, Q&A,
+harness, inspector and tests, **without** Docling. Real conversion then needs the full install.
 
-## Run
+Manual alternative:
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1          # cmd.exe: .venv\Scripts\activate.bat
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## How to run
+
+Activate the environment first (`.venv\Scripts\Activate.ps1`), from the project folder.
 
 | Goal | Command |
 |---|---|
-| Tests | `run_tests.bat` or `python -m pytest -q` |
-| Convert documents | `python -m engine.convert samples --out output` (options: `--accurate`, `--ocr`, `--no-fallback`) |
-| Validate tables | `python -m harness.validate output` |
-| Baseline + comparison | `run_all.bat` (engine → harness → pdfplumber → harness → report) |
-| Inspector | `run_inspector.bat`, then upload a PDF / DOCX / image in the sidebar (or use documents already in `output/`) |
-| API | `run_api.bat` (real output) or `run_api.bat demo` (no Docling); Swagger at http://127.0.0.1:8000/docs |
-| Watch-folder demo | `run_api.bat` (not `demo` mode, which would write into `demo\docs`), then `run_watch.bat "What is the total?"`, then copy a file into `automation\inbox\` |
+| Convert one file or a whole folder | `python -m engine.convert samples\sample_simple_table.pdf --out output` (options: `--accurate`, `--ocr`, `--no-fallback`) |
+| Validate the extracted tables | `python -m harness.validate output` |
+| Inspector (Streamlit) | `run_inspector.bat` → http://localhost:8501 |
+| API | `run_api.bat` → Swagger at http://127.0.0.1:8000/docs (`run_api.bat demo` uses the demo data, no Docling needed) |
+| Watch-folder | `run_api.bat` in one window, `run_watch.bat "What is the total?"` in another, then copy a file into `automation\inbox\` |
+| Q&A from the command line | `python -m qa.demo --root output --question "What is the total?" --doc-id sample_simple_table` |
+| Docling vs pdfplumber comparison | `run_all.bat` (converts every sample: slow) |
+| Digital vs scanned invoice | `python -m baseline.compare_digital_vs_scan` |
 
-Python API:
+Outputs per document in `output\<doc_id>\`: `<doc_id>.md`, `<doc_id>.docling.json`,
+`summary.json` (attempts, mode, status) and `tables\<table_id>.json` / `.csv`.
+The inspector also offers JSON, CSV, Markdown and Excel downloads for each table.
 
-```python
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat
+## Tests
 
-opts = PdfPipelineOptions(); opts.do_table_structure = True
-conv = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)})
-doc = conv.convert("report.pdf").document          # DoclingDocument
-df = doc.tables[0].export_to_dataframe(doc=doc)     # pandas DataFrame
+```powershell
+run_tests.bat            # or: python -m pytest -q
 ```
 
-## Behaviour
+With Docling installed: **149 passed**. On the light install the tests that run the real Docling
+models (`tests/test_real_docling.py` and two in `test_robustness.py`) are skipped.
 
-| Situation | What happens |
-|---|---|
-| Unreadable file (corrupt, protected) or export error | file marked `failed`, batch continues, exit code 2 |
-| PDF with 0 usable tables | retries fast → accurate → OCR + accurate; if still 0: `no_tables` + warning |
-| Scanned PDF (no text layer) | without OCR Docling finds empty table outlines; they do not count, so the cascade reaches OCR automatically |
-| Scanned image (PNG / JPG / TIFF) | same `PdfPipelineOptions` as PDFs, OCR always on: ocr+fast → ocr+accurate |
-| Numbers like `1 234,56`, `1.234,56`, `(120)`, `$40` | converted to numbers; `12%` and `5 TND` stay text; `1,500` = 1500 |
-| Merged cells | flattened to rows/columns (multi-level headers joined) |
-| Table fails a checksum | `FLAGGED`; Q&A refuses and returns the reason |
-| 1-column table holding a whole text block | `FLAGGED` (`MERGED_LAYOUT`); a normal 1-column list passes with a warning |
+## Samples and demo
 
-`sample_wrong_total_long_title.pdf` is kept on purpose: it is a PDF where Docling finds 0 tables,
-used to show the failure path. Docling-dependent paths (real conversion, HybridChunker reload,
-`--vlm`) need a machine with Docling installed; most tests use fakes, and the tests that run the
-real models (`tests/test_real_docling.py` and 2 tests in `test_robustness.py`) are skipped without Docling.
+| Sample | Shows | Expected result |
+|---|---|---|
+| `sample_simple_table.pdf` | clean table with totals | 1 table, **PASS**; "What is the total?" → `1250`, page 1 |
+| `sample_wrong_total.pdf` | printed total is wrong | **FLAGGED** (`ROW_TOTAL_MISMATCH`, `COLUMN_TOTAL_MISMATCH`: 1250 ≠ 1300); question **refused** |
+| `sample_two_column_table.pdf` | two-column page layout | 1 table, PASS; reading order visible in the inspector |
+| `sample_wrong_total_long_title.pdf` | failure case kept on purpose | 0 tables → `no_tables` warning |
+| `invoice_zoho.pdf` | real digital invoice | 3 tables |
+| `scan_invoice.pdf` | the same invoice, scanned | cascade `fast = 0 usable`, `accurate = 0 usable`, `OCR + accurate = 3 usable` |
+| `scan_invoice.jpeg` | the same invoice as an image | OCR conversion; messy table, flagged (see limitations) |
+| `annual_report_biat_2024.pdf` | 33-page real annual report | 40 tables, about 5 minutes to convert |
+| `report_docling_paper.pdf` | multi-column scientific paper | layout and reading-order showcase (slow to convert) |
 
-Known limits (documented, not hidden):
-- Invoice summary blocks (Sub Total / Tax / Total / Balance) have no header row, so Docling uses the
-  first data row as header and the column-sum rule flags the table (`COLUMN_TOTAL_MISMATCH`). This is
-  the safe direction: the table is refused, never used for a wrong answer.
-- On `scan_invoice.jpeg` the layout model marks most of the page as one table: the result is messy and
-  is flagged by the harness. The scanned **PDF** of the same invoice gives clean tables with OCR.
+Suggested demo: convert the samples beforehand, open the inspector, show the layout boxes, a
+PASS table and a FLAGGED table with its reason, ask the same question on both (answer vs refusal),
+then drop the two sample PDFs into the watch-folder.
 
-## API endpoints
+## Limitations
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /convert` | upload a file (or send a server-side `path`) |
-| `POST /convert/path` | JSON `{"path": "..."}` (used by the watch-folder) |
-| `GET /tables/{id}` | one table with its verdict: `{table, verdict, usable}` |
-| `POST /ask` | `{"question", "doc_id"}` → grounded answer with citations, or `refused: true` |
-| `GET /health`, `/documents`, `/tables`, `POST /validate`, `POST /reload` | status and maintenance |
+- The harness checks **arithmetic consistency**, not fidelity to the page: a table without any
+  Total row or column only passes structural checks (shown as "PASS (structure only)").
+- Invoice summary blocks (Sub Total / Tax / Total) have no header row; Docling uses the first line
+  as header and the column-sum rule flags the table. This errs on the safe side (refusal).
+- On `scan_invoice.jpeg` the layout model merges most of the page into one table; the scanned PDF
+  of the same invoice gives clean tables.
+- The Q&A is rule-based and extractive (no LLM is connected); it supports cell, total and simple
+  aggregate questions on verified tables.
+- The `--vlm` (vision-model) option exists but has not been tested.
+- Local academic demo: the API has no authentication; do not expose it to an untrusted network.
 
 More detail: [`api/README.md`](api/README.md), [`qa/README.md`](qa/README.md),
 [`harness/README.md`](harness/README.md), [`inspector/README.md`](inspector/README.md),
-[`automation/README.md`](automation/README.md) (step-by-step watch-folder guide).
+[`automation/README.md`](automation/README.md).
 Presentation guides: [`docs/MEMBER1_SLIDES_GUIDE.md`](docs/MEMBER1_SLIDES_GUIDE.md),
 [`docs/MEMBER3_SLIDES_GUIDE.md`](docs/MEMBER3_SLIDES_GUIDE.md).
-Reference: https://github.com/docling-project/docling
+Docling: https://github.com/docling-project/docling

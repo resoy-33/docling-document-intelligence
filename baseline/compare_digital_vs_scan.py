@@ -1,3 +1,8 @@
+"""Same invoice, digital PDF vs scanned PDF (full-page OCR): tables found and their content.
+
+Run from the project root:  python -m baseline.compare_digital_vs_scan
+Writes output_compare/ (Markdown and one CSV per table).
+"""
 import time
 from pathlib import Path
 from docling.datamodel.base_models import InputFormat
