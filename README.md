@@ -101,8 +101,9 @@ Known limits (documented, not hidden):
 | `POST /ask` | `{"question", "doc_id"}` → grounded answer with citations, or `refused: true` |
 | `GET /health`, `/documents`, `/tables`, `POST /validate`, `POST /reload` | status and maintenance |
 
-More detail: `api/README.md`, `qa/README.md`, `harness/README.md`, `automation/README.md`
-(step-by-step watch-folder guide: `automation/automation_README.md`).
-Team documents: `TEAM_PLAN.md`, `docs/CROSS_REVIEW_MEMBER3.md` (with a 2026-11-24 status update),
-`docs/MEMBER1_SLIDES_GUIDE.md`, `docs/MEMBER3_SLIDES_GUIDE.md`.
+More detail: [`api/README.md`](api/README.md), [`qa/README.md`](qa/README.md),
+[`harness/README.md`](harness/README.md), [`inspector/README.md`](inspector/README.md),
+[`automation/README.md`](automation/README.md) (step-by-step watch-folder guide).
+Presentation guides: [`docs/MEMBER1_SLIDES_GUIDE.md`](docs/MEMBER1_SLIDES_GUIDE.md),
+[`docs/MEMBER3_SLIDES_GUIDE.md`](docs/MEMBER3_SLIDES_GUIDE.md).
 Reference: https://github.com/docling-project/docling

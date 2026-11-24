@@ -18,3 +18,9 @@ automation/results/
 automation/inbox/*
 !automation/inbox/.gitkeep
 docs/project_requirements.pdf
+
+# editor / OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
