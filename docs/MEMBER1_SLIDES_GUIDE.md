@@ -25,7 +25,7 @@ paper (https://arxiv.org/abs/2408.09869). Check TableFormer and pipeline details
 
 ## Real results to show (your own runs)
 
-- `python compare_report.py` after both extractors ran: tables found per PDF.
+- `python -m baseline.compare_report` after both extractors ran (or `run_all.bat`): tables found per PDF.
 - The failure case: `sample_wrong_total_long_title.pdf` gave 0 tables, `sample_wrong_total.pdf` gave 1.
   Say it as it is: the cause is not established.
 - The checksum pass rate for both tools, from Member 2's validator.
@@ -34,7 +34,7 @@ paper (https://arxiv.org/abs/2408.09869). Check TableFormer and pipeline details
 
 | Criterion | Docling | pdfplumber | How to fill it honestly |
 |---|---|---|---|
-| Tables found per PDF | `compare_report.py` | `compare_report.py` | from your run |
+| Tables found per PDF | `baseline/compare_report.py` | `baseline/compare_report.py` | from your run |
 | Checksum pass rate | validator on `output/` | validator on `output_baseline/` | needs Member 2 |
 | Multi-column reading order | read the `.md` of `sample_two_column_table` | compare by eye | quote only what you saw |
 | Scanned PDFs / OCR | `--ocr` option exists in the CLI | check the pdfplumber docs | test with a scanned PDF, cite the docs |

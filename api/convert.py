@@ -1,6 +1,6 @@
 """Docling conversion adapter used by POST /convert.
 
-The conversion itself remains Member 1's code (`engine.convert`).  This module only:
+The conversion itself remains the engine code (`engine.convert`).  This module only:
   * checks that Docling is importable before starting (clear 503 instead of a vague
     "failed" status caused by an ImportError hidden inside the retry cascade);
   * validates the file extension;

@@ -1,4 +1,4 @@
-"""Member 3 grounded Q&A tests.
+"""the Q&A layer grounded Q&A tests.
 
 The most important tests are the refusal tests: a table that fails the harness must never
 support an answer, and an answer must never contain a number that is not in its cited

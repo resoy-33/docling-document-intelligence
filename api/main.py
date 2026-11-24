@@ -1,4 +1,4 @@
-"""FastAPI app for Member 3: convert, inspect tables, ask grounded questions.
+"""FastAPI app: convert, inspect tables, ask grounded questions.
 
 Run with the demo output (no Docling needed):
 
@@ -8,15 +8,15 @@ Run with the demo output (no Docling needed):
 Then open http://127.0.0.1:8000/docs for the interactive OpenAPI page.
 
 Endpoints required by the project:
-    POST /convert       upload a file (multipart) and convert it with Member 1's engine
-    GET  /tables/{id}   one table + its Member 2 verdict + usability
+    POST /convert       upload a file (multipart) and convert it with the engine
+    GET  /tables/{id}   one table + its the harness verdict + usability
     POST /ask           grounded answer, or a refusal with the reason
 
 Extra endpoints for the integration/demo:
     POST /convert/path  same conversion, but the file already exists on the server
     GET  /documents     documents, pass counts, chunking method
     GET  /tables        list/filter tables
-    POST /validate      re-run Member 2's harness on the output folder
+    POST /validate      re-run the harness on the output folder
     POST /reload        re-scan the output folder after an external conversion
 """
 from __future__ import annotations
@@ -67,7 +67,7 @@ def create_app(
         or "output"
     )
     app = FastAPI(
-        title="Docling Document Intelligence - Member 3 API",
+        title="Docling Document Intelligence API",
         version="1.0.0",
         description=(
             "Chunking, retrieval and grounded Q&A over tables verified by the "
@@ -130,7 +130,7 @@ def create_app(
     @app.get("/", include_in_schema=False)
     def index():
         return {
-            "name": "Docling Document Intelligence - Member 3 API",
+            "name": "Docling Document Intelligence API",
             "docs": "/docs",
             "health": "/health",
             "ask": "POST /ask",

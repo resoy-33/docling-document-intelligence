@@ -1,7 +1,7 @@
-"""Pydantic v2 models for Member 3: chunks, verdicts, citations and grounded answers.
+"""Pydantic v2 models: chunks, verdicts, citations and grounded answers.
 
-The table itself stays in the contract defined by Member 1 (`engine/contract.py`) and
-validated by Member 2 (`harness/`).  This module only adds the objects needed to chunk,
+The table itself stays in the contract defined by the engine (`engine/contract.py`) and
+validated by the harness (`harness/`).  This module only adds the objects needed to chunk,
 retrieve and answer from *validated* tables.
 """
 from __future__ import annotations
@@ -55,7 +55,7 @@ class Chunk(BaseModel):
 
 
 class TableVerdict(BaseModel):
-    """Member 2's verdict, flattened for the API and for chunk metadata."""
+    """the harness verdict, flattened for the API and for chunk metadata."""
 
     table_id: str
     doc_id: str
@@ -64,6 +64,7 @@ class TableVerdict(BaseModel):
     verifiable: bool = False
     codes: list[str] = Field(default_factory=list)
     reason: str = ""
+    warnings: list[str] = Field(default_factory=list)
 
     @property
     def usable(self) -> bool:

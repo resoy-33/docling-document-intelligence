@@ -1,4 +1,4 @@
-"""Member 3: chunking, retrieval and grounded Q&A over validated tables.
+"""Chunking, retrieval and grounded Q&A over validated tables.
 
 Public entry points:
 
@@ -6,8 +6,8 @@ Public entry points:
     service = QAService("demo/docs")
     answer = service.ask("What were Laptops sales in Q1?")
 
-The service reads the output layout written by Member 1 and the verdicts recomputed by
-Member 2's harness.  It never answers from a table whose verdict is not `passed`.
+The service reads the output layout written by the engine and the verdicts recomputed by
+the harness.  It never answers from a table whose verdict is not `passed`.
 """
 from .answer import answer_question, verify_grounding
 from .corpus import Corpus, TableContext, load_corpus

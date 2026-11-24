@@ -23,7 +23,9 @@ Status of a file: "ok" (>= 1 table), "no_tables" (read fine, 0 tables), "failed"
 Neither "no_tables" nor "failed" stops the run. Downstream code (the harness) must treat
 "0 tables where one is expected" and "failed" as FAILURES, never as success.
 
-Retry cascade for PDFs with 0 tables: fast -> accurate -> OCR + accurate -> (optional) AI vision model.
+Retry cascade for PDFs with 0 usable tables: fast -> accurate -> OCR + accurate -> (optional) AI vision model.
+"Usable" means the table has at least one cell: a scanned page read WITHOUT OCR gives empty table
+outlines, so those do not stop the cascade. Images (scans/photos) always use OCR: ocr+fast -> ocr+accurate.
 Whatever any attempt extracts is still plain data: it must pass the harness checksums like everything else.
 """
 from __future__ import annotations
@@ -48,17 +50,27 @@ ZERO_TABLES_WARNING = (
     "(Docling's layout model can miss or mislabel a table)."
 )
 
+EMPTY_TABLES_WARNING = (
+    "Tables were detected but none contains any text (a scanned page read without OCR?). "
+    "Try again with --ocr."
+)
+
 PDF_SUFFIXES = {".pdf"}
-OTHER_SUFFIXES = {".docx", ".pptx", ".xlsx", ".html", ".htm", ".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+OTHER_SUFFIXES = {".docx", ".pptx", ".xlsx", ".html", ".htm"} | IMAGE_SUFFIXES
 SUPPORTED_SUFFIXES = PDF_SUFFIXES | OTHER_SUFFIXES
 
 
 # ----------------------------------------------------------------- converters
 def build_converter(accurate: bool = False, ocr: bool = False):
-    """Docling converter for PDFs. Table structure (TableFormer) is always on."""
+    """Docling converter for PDFs and images. Table structure (TableFormer) is always on.
+
+    Images (scanned pages, photos) go through the same page pipeline as PDFs, so they get
+    the same PdfPipelineOptions.
+    """
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
-    from docling.document_converter import DocumentConverter, PdfFormatOption
+    from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
 
     opts = PdfPipelineOptions()
     opts.do_table_structure = True
@@ -67,7 +79,10 @@ def build_converter(accurate: bool = False, ocr: bool = False):
         TableFormerMode.ACCURATE if accurate else TableFormerMode.FAST
     )
     return DocumentConverter(
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=opts),
+            InputFormat.IMAGE: ImageFormatOption(pipeline_options=opts),
+        }
     )
 
 
@@ -91,7 +106,7 @@ def build_vlm_converter():
 
 
 def make_converter(mode: str):
-    """mode: 'default' (Word, Excel, HTML, images), 'fast', 'accurate', 'ocr+fast',
+    """mode: 'default' (Word, PowerPoint, Excel, HTML), 'fast', 'accurate', 'ocr+fast',
     'ocr+accurate' or 'vlm'."""
     if mode == "default":
         from docling.document_converter import DocumentConverter
@@ -104,22 +119,40 @@ def make_converter(mode: str):
 
 def plan_attempts(path: Path, accurate: bool, ocr: bool, vlm: bool, fallback: bool) -> list[str]:
     """The ordered list of converter modes to try for one file."""
-    if path.suffix.lower() not in PDF_SUFFIXES:
-        return ["default"]  # Word / Excel / HTML / images: one attempt
+    suffix = path.suffix.lower()
+    is_image = suffix in IMAGE_SUFFIXES
+    if is_image:
+        ocr = True  # a picture has no text layer: OCR is always needed
+    elif suffix not in PDF_SUFFIXES:
+        return ["default"]  # Word / PowerPoint / Excel / HTML: one attempt
     first = ("ocr+" if ocr else "") + ("accurate" if accurate else "fast")
     plan = [first]
     if fallback:
         for mode in ("accurate", "ocr+accurate"):
+            if is_image and not mode.startswith("ocr"):
+                continue
             if mode not in plan:
                 plan.append(mode)
-        if vlm:
-            plan.append("vlm")
-    elif vlm:
+    if vlm and not is_image:  # the VLM converter is configured for PDFs only
         plan.append("vlm")
     return plan
 
 
 # ------------------------------------------------------------------- tables
+def table_dataframe(table, doc) -> pd.DataFrame:
+    """One Docling table as a pandas DataFrame."""
+    try:
+        return table.export_to_dataframe(doc=doc)
+    except TypeError:  # older docling versions have no `doc` argument
+        return table.export_to_dataframe()
+
+
+def count_usable_tables(doc) -> int:
+    """Tables with at least one column. A scanned page converted without OCR gives
+    empty table outlines (0 columns): they must not count as "tables found"."""
+    return sum(1 for table in doc.tables if len(table_dataframe(table, doc).columns) > 0)
+
+
 def extract_tables(doc, doc_id: str) -> list[dict]:
     """Walk doc.tables and convert each one to the contract format."""
     per_page_counter: dict[int, int] = {}
@@ -127,10 +160,7 @@ def extract_tables(doc, doc_id: str) -> list[dict]:
     for table in doc.tables:
         page = table.prov[0].page_no if table.prov else 0
         per_page_counter[page] = per_page_counter.get(page, 0) + 1
-        try:
-            df = table.export_to_dataframe(doc=doc)
-        except TypeError:  # older docling versions have no `doc` argument
-            df = table.export_to_dataframe()
+        df = table_dataframe(table, doc)
         tables.append(dataframe_to_contract(df, doc_id, page, per_page_counter[page]))
     return tables
 
@@ -154,10 +184,26 @@ def doc_id_for(path: Path) -> str:
 
 
 # ------------------------------------------------------------------- writing
+def clear_previous_outputs(target: Path, doc_id: str) -> None:
+    """Delete the files of an earlier conversion of the SAME document.
+
+    Without this, converting a file again (other options, or a failure) would leave old
+    table files next to the new summary, and they would still be shown and validated.
+    """
+    old_files = [target / f"{doc_id}.md", target / f"{doc_id}.docling.json",
+                 *target.glob("tables/*.json"), *target.glob("tables/*.csv")]
+    for path in old_files:
+        try:
+            path.unlink(missing_ok=True)
+        except PermissionError:
+            print(f"  WARNING: could not delete the old file {path} (is it open in another program?)")
+
+
 def write_outputs(doc, source: Path, out_dir: Path, seconds: float, extra: dict | None = None):
     """Write md / json / tables / summary for one converted document. Returns (tables, summary)."""
     doc_id = doc_id_for(source)
     target = Path(out_dir) / doc_id
+    clear_previous_outputs(target, doc_id)
     (target / "tables").mkdir(parents=True, exist_ok=True)
 
     (target / f"{doc_id}.md").write_text(doc.export_to_markdown(), encoding="utf-8")
@@ -185,6 +231,8 @@ def write_outputs(doc, source: Path, out_dir: Path, seconds: float, extra: dict 
     }
     if not tables:
         summary["warning"] = ZERO_TABLES_WARNING
+    elif not any(t["columns"] for t in tables):
+        summary["warning"] = EMPTY_TABLES_WARNING
     summary.update(extra or {})
     (target / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return tables, summary
@@ -208,7 +256,8 @@ def process_file(
 ) -> dict:
     """Run the attempts in `plan` until one finds a table. Never raises: returns the summary dict.
 
-    Keeps the first attempt that found tables; otherwise the last attempt that could read the file.
+    Keeps the first attempt that found a usable table (with cells); otherwise the last attempt
+    that could read the file.
     """
     path = Path(path)
     attempts: list[dict] = []
@@ -218,16 +267,18 @@ def process_file(
         try:
             doc = get_converter(mode).convert(path).document
             seconds = time.perf_counter() - start
-            n = len(doc.tables)
-            attempts.append({"mode": mode, "n_tables": n, "error": None})
+            usable = count_usable_tables(doc)
+            attempts.append({"mode": mode, "n_tables": len(doc.tables),
+                             "n_usable": usable, "error": None})
             best = (doc, seconds, mode)
-            if n > 0:
+            if usable > 0:
                 break
         except Exception as exc:  # noqa: BLE001 - one bad file must not stop the run
             attempts.append({"mode": mode, "n_tables": None, "error": f"{type(exc).__name__}: {exc}"})
 
     if best is None:  # no attempt could read the file
         target = Path(out_dir) / doc_id_for(path)
+        clear_previous_outputs(target, doc_id_for(path))
         target.mkdir(parents=True, exist_ok=True)
         summary = {
             "doc_id": doc_id_for(path),
@@ -242,7 +293,22 @@ def process_file(
         return summary
 
     doc, seconds, mode = best
-    _, summary = write_outputs(doc, path, out_dir, seconds, {"mode": mode, "attempts": attempts})
+    try:
+        _, summary = write_outputs(doc, path, out_dir, seconds, {"mode": mode, "attempts": attempts})
+    except Exception as exc:  # noqa: BLE001 - an export error must not abort the whole batch
+        target = Path(out_dir) / doc_id_for(path)
+        clear_previous_outputs(target, doc_id_for(path))  # no half-written results
+        target.mkdir(parents=True, exist_ok=True)
+        summary = {
+            "doc_id": doc_id_for(path),
+            "source": str(path),
+            "status": "failed",
+            "n_tables": 0,
+            "table_ids": [],
+            "attempts": attempts,
+            "error": f"export failed: {type(exc).__name__}: {exc}",
+        }
+        (target / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
 
 
@@ -288,12 +354,13 @@ def main(argv: list[str] | None = None) -> int:
               f"{out_dir / summary['doc_id']}{tag}")
         if summary["status"] == "failed":
             print(f"  ERROR: {summary['error']}")
-        elif summary["status"] == "no_tables":
-            print(f"  WARNING: {ZERO_TABLES_WARNING}")
+        elif summary.get("warning"):
+            print(f"  WARNING: {summary['warning']}")
         tried = summary.get("attempts", [])
-        if len(tried) > 1:
-            print("  attempts: " + ", ".join(f"{a['mode']}={a['n_tables'] if a['error'] is None else 'error'}"
-                                             for a in tried))
+        if len(tried) > 1:  # e.g. "fast=0 usable/3, ocr+accurate=3 usable/3"
+            print("  attempts: " + ", ".join(
+                f"{a['mode']}=error" if a["error"] else f"{a['mode']}={a['n_usable']} usable/{a['n_tables']}"
+                for a in tried))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     counts = {s: sum(1 for r in report if r["status"] == s) for s in ("ok", "no_tables", "failed")}

@@ -1,4 +1,4 @@
-"""Generate `demo/docs/`, a hand-written engine-output folder for Member 3 demos/tests.
+"""Generate `demo/docs/`, a hand-written engine-output folder for demos and tests.
 
 This is NOT Docling output and must never be presented as such.  It exists so the API,
 chunking, retrieval, refusal and tests can run on a machine without the Docling models.
@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent / "docs"
 
 NOTE = (
-    "Hand-written demo data for Member 3 (API/Q&A). Not produced by Docling. "
+    "Hand-written demo data for the API/Q&A tests. Not produced by Docling. "
     "Real engine output comes from `python -m engine.convert samples --out output`."
 )
 
@@ -92,7 +92,7 @@ def main() -> int:
 <!-- page: 1 -->
 # 2026 Sales Review
 
-This synthetic report is used only to demonstrate Member 3's chunking and grounded Q&A.
+This synthetic report is used only to demonstrate the chunking and grounded Q&A.
 The quarterly table is stored as a contract table in `tables/`.
 
 <!-- page: 2 -->
@@ -141,7 +141,7 @@ as well as quarter questions.
 # Budget with a deliberate error
 
 This table is intentionally corrupted: the Total column says 99 while 30 + 10 = 40.
-Member 2's harness must fail it, and Member 3 must refuse to answer from it.
+the harness must fail it, and the Q&A layer must refuse to answer from it.
 """,
     )
 

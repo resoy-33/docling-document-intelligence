@@ -1,8 +1,8 @@
-"""Grounded, extractive Q&A over validated tables (Member 3).
+"""Grounded, extractive Q&A over validated tables (Q&A layer).
 
 The rule is simple and non-negotiable:
 
-    A numeric answer may only be built from a table whose Member 2 verdict is `passed`.
+    A numeric answer may only be built from a table whose the harness verdict is `passed`.
 
 The default answerer is **extractive**: it finds a cell, a row, a column or an aggregate
 inside the validated table and quotes the exact cells it used.  It never invents prose
@@ -20,6 +20,7 @@ from typing import Callable
 from harness.checks import find_total_col, find_total_row, is_number
 from harness.models import TableResult
 
+from .chunking import table_markdown
 from .corpus import Corpus, TableContext
 from .models import Answer, Citation
 from .retrieval import fold, stem, tokenize
@@ -596,7 +597,7 @@ def _answer_from_table(
 
     # 8. explicit "show/list the table", or a generic question with table evidence
     if wants_list or (not rows and not columns and (q_set & GENERIC_WORDS)):
-        body = f"Table {table.table_id}:\n" + _table_markdown(table)
+        body = f"Table {table.table_id}:\n" + table_markdown(table)
         return _finalize(
             question, body, context,
             [_citation(table, quote=f"{len(table.rows)} rows, {len(table.columns)} columns")],
@@ -610,16 +611,6 @@ def _answer_from_table(
         warnings=warnings,
         used_table_ids=[table.table_id],
     )
-
-
-def _table_markdown(table: TableResult) -> str:
-    lines = [
-        "| " + " | ".join(table.columns) + " |",
-        "| " + " | ".join("---" for _ in table.columns) + " |",
-    ]
-    for row in table.rows:
-        lines.append("| " + " | ".join(_fmt_cell(cell) for cell in row) + " |")
-    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------- public
@@ -766,7 +757,7 @@ def answer_question(
         "Rules: quote numbers exactly as they appear; do not calculate anything that is "
         "not directly present; if the table cannot answer, reply NOT_ANSWERABLE.\n\n"
         f"Question: {question}\n\nTable {best_passed.table.table_id} "
-        f"(validated, page {best_passed.table.page}):\n{_table_markdown(best_passed.table)}\n"
+        f"(validated, page {best_passed.table.page}):\n{table_markdown(best_passed.table)}\n"
     )
     try:
         raw = llm(prompt)

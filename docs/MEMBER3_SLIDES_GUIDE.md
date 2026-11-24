@@ -228,7 +228,7 @@ Source: https://fastapi.tiangolo.com/
 Run these on the demo output (no Docling needed):
 
 ```bat
-run_demo_api.bat
+run_api.bat demo
 ```
 
 Then:
@@ -261,6 +261,10 @@ Screenshot these responses; the JSON is the evidence.
 | Demo corpus | hand-written, **not** Docling output (stated in `demo/docs/README.md`) |
 
 Do not say "HybridChunker was tested" or "Docling output was tested" on this machine.
+
+**Update 2026-11-24 (machine with Docling 2.151.1):** the whole suite gives `149 passed`; the API on
+real `output/` reports `chunking_method: hybrid`, answers `sample_simple_table` (1250, page 1) and
+refuses `sample_wrong_total`. On that machine both can now be claimed.
 
 ## Slide 12 — Limits and next steps
 

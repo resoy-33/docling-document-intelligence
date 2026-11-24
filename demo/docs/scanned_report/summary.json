@@ -5,6 +5,6 @@
   "seconds": 0.0,
   "n_tables": 0,
   "table_ids": [],
-  "note": "Hand-written demo data for Member 3 (API/Q&A). Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`.",
+  "note": "Hand-written demo data for the API/Q&A tests. Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`.",
   "warning": "0 tables found. If this document should contain a table, treat this as a FAILURE (Docling's layout model can miss or mislabel a table)."
 }

@@ -10,7 +10,7 @@ Exit code: 0 if everything passes, 1 otherwise (usable as a gate in a script).
 Rules that matter for the benchmark:
   - a document with 0 tables, or whose extraction failed (summary.json), is a FAILURE;
   - the pass rate is given per table (found tables only) and per document (strict).
-Member 3 can call verified_tables(root) to get ONLY the tables that passed.
+The Q&A layer can call verified_tables(root) to get ONLY the tables that passed.
 """
 import argparse
 import json
@@ -92,7 +92,7 @@ def validate_directory(
 def verified_tables(
     root: Path, tol: float = DEFAULT_TOL, require_totals: bool = False
 ) -> list[TableResult]:
-    """Only the tables that PASS the harness. This is what the Q&A step (Member 3) may use."""
+    """Only the tables that PASS the harness. This is what the Q&A step (Q&A layer) may use."""
     tables = []
     for path in sorted(Path(root).glob("*/tables/*.json")):
         if validate_file(path, tol=tol, require_totals=require_totals).passed:
@@ -110,6 +110,8 @@ def print_summary(summary: BatchSummary) -> None:
               f"{'' if r.verifiable or not r.passed else '  (no total to verify)'}")
         for f in r.failures:
             print(f"        - {f.code.value}: {f.message}")
+        for w in r.warnings:
+            print(f"        ! warning: {w}")
     for issue in summary.doc_issues:
         print(f"DOC   {issue.doc_id}: {issue.code.value} - {issue.message}")
     print(f"\nTables   : {summary.n_tables_passed}/{summary.n_tables} pass "

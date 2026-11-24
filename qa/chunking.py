@@ -1,4 +1,4 @@
-"""Chunking for Member 3.
+"""Chunking for the Q&A layer.
 
 Two strategies, chosen automatically:
 
@@ -20,9 +20,10 @@ import json
 import re
 from pathlib import Path
 
+from engine.export import table_to_markdown as contract_table_markdown
 from harness.models import TableResult
 
-from .models import Cell, Chunk, TableVerdict, ValidationStatus
+from .models import Chunk, TableVerdict, ValidationStatus
 
 PAGE_MARKER = re.compile(r"^\s*<!--\s*page\s*[:=]?\s*(\d+)\s*-->\s*$", re.IGNORECASE)
 _TABLE_LINE = re.compile(r"^\s*\|")
@@ -37,22 +38,9 @@ def _status_for(table_id: str, verdicts: dict[str, TableVerdict]) -> ValidationS
     return ValidationStatus.PASSED if verdict.passed else ValidationStatus.FAILED
 
 
-def _fmt(value: Cell) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    return str(value)
-
-
 def table_markdown(table: TableResult) -> str:
     """Render a contract table as Markdown (used in chunk text and evidence)."""
-    header = "| " + " | ".join(table.columns) + " |"
-    sep = "| " + " | ".join("---" for _ in table.columns) + " |"
-    lines = [header, sep]
-    for row in table.rows:
-        lines.append("| " + " | ".join(_fmt(cell) for cell in row) + " |")
-    return "\n".join(lines)
+    return contract_table_markdown(table.model_dump())
 
 
 def table_text(table: TableResult, status: ValidationStatus, part: int = 1, n_parts: int = 1) -> str:

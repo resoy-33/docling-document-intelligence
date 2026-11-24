@@ -107,6 +107,41 @@ def test_cascade_all_empty_gives_no_tables_and_warning(tmp_path):
     assert len(summary["attempts"]) == 2
 
 
+class EmptyOutlineTable(FakeTable):
+    """What Docling returns for a table on a scanned page read WITHOUT OCR: no cells at all."""
+
+    def export_to_dataframe(self, doc=None):
+        import pandas as pd
+        return pd.DataFrame()
+
+
+class ScanConverter(FakeConverter):
+    def convert(self, path):
+        self.calls += 1
+        doc = FakeDoc(0)
+        doc.tables = [EmptyOutlineTable() for _ in range(3)]
+        return SimpleNamespace(document=doc)
+
+
+def test_empty_table_outlines_do_not_stop_the_cascade(tmp_path):
+    """Bug fix: a scanned PDF gave 3 EMPTY tables without OCR and the cascade stopped there."""
+    conv = {"fast": ScanConverter(), "accurate": ScanConverter(), "ocr+accurate": FakeConverter(2)}
+    summary = run(tmp_path, ["fast", "accurate", "ocr+accurate"], conv)
+    assert summary["mode"] == "ocr+accurate" and summary["n_tables"] == 2
+    assert summary["attempts"][0] == {"mode": "fast", "n_tables": 3, "n_usable": 0, "error": None}
+
+
+def test_only_empty_tables_gives_a_clear_warning(tmp_path):
+    summary = run(tmp_path, ["fast"], {"fast": ScanConverter()})
+    assert summary["n_tables"] == 3 and "--ocr" in summary["warning"]
+
+
+def test_plan_for_images_always_uses_ocr():
+    assert engine.plan_attempts(Path("scan.jpeg"), False, False, False, True) == [
+        "ocr+fast", "ocr+accurate"]
+    assert engine.plan_attempts(Path("scan.png"), True, False, True, True) == ["ocr+accurate"]
+
+
 def test_error_in_first_attempt_falls_through_to_next(tmp_path):
     conv = {"fast": FakeConverter(error=RuntimeError("boom")), "accurate": FakeConverter(1)}
     summary = run(tmp_path, ["fast", "accurate"], conv)
@@ -120,6 +155,18 @@ def test_all_attempts_fail_gives_failed_status_without_raising(tmp_path):
     assert summary["status"] == "failed" and "bad file" in summary["error"]
     saved = json.loads((tmp_path / "out" / "x" / "summary.json").read_text(encoding="utf-8"))
     assert saved["status"] == "failed"
+
+
+def test_reconversion_does_not_leave_stale_tables(tmp_path):
+    """Converting the same file again must not keep the tables of the previous run."""
+    run(tmp_path, ["fast"], {"fast": FakeConverter(3)})
+    tables = tmp_path / "out" / "x" / "tables"
+    assert len(list(tables.glob("*.json"))) == 3
+    run(tmp_path, ["fast"], {"fast": FakeConverter(1)})
+    assert [p.name for p in tables.glob("*.json")] == ["x_p1_t1.json"]
+    summary = run(tmp_path, ["fast"], {"fast": FakeConverter(error=ValueError("bad"))})
+    assert summary["status"] == "failed" and not list(tables.glob("*.json"))
+    assert not (tmp_path / "out" / "x" / "x.md").exists()
 
 
 def test_main_continues_after_a_failed_file(tmp_path, monkeypatch, capsys):
@@ -167,3 +214,9 @@ def test_real_docling_isolates_a_corrupt_file(tmp_path):
     bad.write_text("this is not a real docx file")
     summary = engine.process_file(bad, tmp_path / "out", ["default"], engine.make_converter)
     assert summary["status"] == "failed"
+
+
+def test_parse_number_bracket_minus():
+    assert parse_number("(-) 100.000") == -100
+    assert parse_number("(-)100.000") == -100
+    assert parse_number("(-)") is None

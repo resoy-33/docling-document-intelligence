@@ -7,7 +7,7 @@ questions ("zero hallucination" gate).
 
 ```
 output/<doc_id>/tables/*.json  ->  TableResult  ->  checksum rules  ->  ValidationReport  ->  pass rates
-        (engine, Member 1)         (models.py)       (checks.py)         (models.py)         (validate.py)
+        (engine)         (models.py)       (checks.py)         (models.py)         (validate.py)
 ```
 
 ## Quick start
@@ -41,6 +41,7 @@ DOC   sample_wrong_total_long_title: NO_TABLES - 0 tables found (...)
 | row totals | `ROW_TOTAL_MISMATCH` | cells of a row add up to its `Total` column |
 | column totals | `COLUMN_TOTAL_MISMATCH` | rows of a column add up to the `Total` row |
 | totals present | `NO_TOTALS` | only with `--require-totals`: a table with no total cannot be verified |
+| single column | `MERGED_LAYOUT` | a 1-column table whose cell holds a long text block (> 300 characters or 5+ line breaks): the layout model merged a page region into one cell. Any other 1-column table **passes with a warning** (a simple list is legitimate, but nothing can be cross-checked) |
 | file format | `INVALID_FORMAT` | the JSON is unreadable or does not follow the contract |
 | document level | `NO_TABLES`, `EXTRACTION_FAILED` | 0 tables found, or the extractor could not read the file |
 

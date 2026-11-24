@@ -1,7 +1,7 @@
-# Member 3 — chunking, retrieval and grounded Q&A (`qa/`)
+# Chunking, retrieval and grounded Q&A (`qa/`)
 
 This folder turns verified tables into retrievable chunks, retrieves the right evidence for
-a question, and answers **only** from tables whose Member 2 verdict is `passed: true`.
+a question, and answers **only** from tables whose harness verdict is `passed: true`.
 A failed table is never used to answer, even if it is the best lexical match.
 
 ```
@@ -54,7 +54,7 @@ It exits with code 3 and returns `refused: true`, the table id, and the harness 
 | File | Role |
 |---|---|
 | `models.py` | Pydantic v2 models: `Chunk`, `TableVerdict`, `Citation`, `Answer` |
-| `verdicts.py` | recomputes Member 2's verdict with `harness.validate_file` (never trusts a stale JSON report) |
+| `verdicts.py` | recomputes the harness verdict with `harness.validate_file` (never trusts a stale JSON report) |
 | `chunking.py` | HybridChunker path + deterministic Markdown/table fallback |
 | `retrieval.py` | dependency-free BM25 index with accent folding and small plural folding |
 | `corpus.py` | scans `output/<doc_id>/`, loads tables, verdicts, chunks and document issues |
@@ -100,7 +100,7 @@ table first.
 
 ## Answer policy (zero hallucination)
 
-1. Compute a verdict for every table with Member 2's harness.
+1. Compute a verdict for every table with the harness.
 2. If the best-matching table failed, **refuse** and show the failure reason. Do not switch
    to a weaker passing table that would silently change the subject.
 3. Only use `passed` tables. If a table is passed but has no totals, answer and attach a
@@ -147,13 +147,13 @@ network call in the deliverable.
 python -m pytest -q tests\test_qa_chunking.py tests\test_qa_answer.py tests\test_api.py
 ```
 
-The Member 3 tests cover chunk metadata, page markers, failed-table status, table
+The Q&A tests cover chunk metadata, page markers, failed-table status, table
 splitting, every answer shape above, every refusal path, the number-grounding check, the
 fake-LLM rejection, the API endpoints, and `/convert` with a fake engine.
 
-On 2026-11-22, on Windows with Python 3.12 and no Docling installed:
-`119 passed, 2 skipped` for the **whole project** suite. The 2 skipped tests are the
-Docling-only tests from Member 1; the HybridChunker path therefore has **not** been
+Last run (Python 3.12, Docling not installed):
+`127 passed, 2 skipped` for the **whole project** suite. The 2 skipped tests are the
+Docling-only tests from the engine; the HybridChunker path therefore has **not** been
 executed on this machine. It is implemented and will run once Docling is installed.
 
 ## Limits (state these on the slides)
@@ -164,7 +164,7 @@ executed on this machine. It is implemented and will run once Docling is install
 * The answerer supports one Total row / one Total column, like the harness.
 * Text chunks are retrieved for context but are **not** a source of numeric answers.
 * The harness checks arithmetic consistency, not agreement with the original PDF. A
-  consistently misread table can pass; that is a documented limit of Member 2, not hidden.
+  consistently misread table can pass; that is a documented limit of the harness, not hidden.
 * No authentication, rate limiting or multi-user storage: this is a local academic demo.
 
 ## Sources for the slides

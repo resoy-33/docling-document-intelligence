@@ -66,7 +66,11 @@ The full API response for each PDF is saved in `automation/results/<pdf name>.js
 
 - `ERROR: the API call failed`: the API in Terminal 1 is not running. Start it (step 2).
 - 503 error from the API: Docling is not installed in this environment. Redo step 1.
-- Nothing happens after dropping a PDF: check that the file is in `automation/inbox/` and ends in `.pdf`.
+- Nothing happens after dropping a file: check that it is in `automation/inbox/` and is a supported type
+  (PDF, DOCX, PPTX, XLSX, HTML, PNG, JPG, TIFF).
+- API on another port: `set DOCLING_API_URL=http://127.0.0.1:8765` before starting the watch-folder.
+- Shortcut: `run_api.bat` (window 1) and `run_watch.bat "What is the total?"` (window 2) do steps 2 and 3.
+  Do not use `run_api.bat demo` here: it would write the conversions into `demo\docs`.
 - Stop any terminal with `Ctrl+C`.
 
 ## Security note

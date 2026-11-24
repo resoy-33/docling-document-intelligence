@@ -1,6 +1,6 @@
 # Fixtures (hand-written tables in the team contract format)
 
-| File | What it is | Expected verdict (Member 2) |
+| File | What it is | Expected verdict (harness) |
 |---|---|---|
 | good_table_1.json | correct totals | pass |
 | good_table_2.json | correct totals | pass |
@@ -8,4 +8,4 @@
 | missing_cell.json | one empty cell | fail: missing cell |
 | ragged_columns.json | a row with fewer cells than columns | fail: column count |
 
-Members 2, 3 and 4 build against these until real Docling output is available.
+the harness, the Q&A layer and the automation build against these until real Docling output is available.

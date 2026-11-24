@@ -1,6 +1,6 @@
 """Pydantic v2 models of the verification harness.
 
-TableResult      a table in the team contract format (what Member 1 writes).
+TableResult      a table in the team contract format (what the engine writes).
 Failure          one reason why a table is rejected.
 ValidationReport the pass/fail verdict for ONE table, with every failure reason.
 DocIssue         a problem at document level (0 tables found, extraction failed).
@@ -38,6 +38,7 @@ class FailureCode(str, Enum):
     ROW_TOTAL_MISMATCH = "ROW_TOTAL_MISMATCH"          # cells of a row do not add up to its Total
     COLUMN_TOTAL_MISMATCH = "COLUMN_TOTAL_MISMATCH"    # cells of a column do not add up to the Total row
     NO_TOTALS = "NO_TOTALS"                            # nothing to verify (only if require_totals)
+    MERGED_LAYOUT = "MERGED_LAYOUT"                    # 1 column holding a whole text block: not a real table
     # document level
     NO_TABLES = "NO_TABLES"                            # the extractor found 0 tables
     EXTRACTION_FAILED = "EXTRACTION_FAILED"            # the extractor could not read the file
@@ -55,6 +56,7 @@ class ValidationReport(BaseModel):
     table_id: str
     page: int | None = None
     failures: list[Failure] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)  # informative only: do not change `passed`
     checks_run: list[str] = Field(default_factory=list)
 
     @computed_field

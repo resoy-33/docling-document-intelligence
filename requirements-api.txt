@@ -1,9 +1,16 @@
-# Light setup for Member 3 (api/ + qa/): no Docling models, no 5 GB download.
-# Use this to run the demo and the tests on any PC.
+# Light install: API, Q&A, harness, inspector and tests. No Docling models.
 pandas
+openpyxl
 pydantic>=2
 pytest
 fastapi
 uvicorn
 httpx
 python-multipart
+requests
+watchdog
+pdfplumber
+reportlab
+pypdfium2
+pillow
+streamlit>=1.50   # inspector uses st.image(width="stretch")

@@ -1,1 +1,1 @@
-"""Member 3 API package (FastAPI)."""
+"""API package (FastAPI)."""

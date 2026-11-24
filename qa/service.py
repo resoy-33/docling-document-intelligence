@@ -1,7 +1,7 @@
 """Service layer used by the FastAPI app and by the CLI demo.
 
 Keeping this outside `api/` means the Q&A logic can be tested without starting a server,
-and Member 4's automation can import the service directly if it prefers Python over HTTP.
+and the automation can import the service directly if it prefers Python over HTTP.
 """
 from __future__ import annotations
 

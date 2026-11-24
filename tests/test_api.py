@@ -1,4 +1,4 @@
-"""Member 3 API tests: endpoints, refusal policy, conversion adapter with a fake engine."""
+"""API tests: endpoints, refusal policy, conversion adapter with a fake engine."""
 from __future__ import annotations
 
 import json

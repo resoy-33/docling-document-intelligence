@@ -26,12 +26,13 @@ _US_GROUPED = re.compile(r"^\d{1,3}(,\d{3})+(\.\d+)?$")  # 1,200  1,200.50
 _SPACE_GROUPED = re.compile(r"^\d{1,3}( \d{3})+([.,]\d+)?$")  # 1 234  1 234,56
 _EU_GROUPED = re.compile(r"^\d{1,3}(\.\d{3})+,\d+$")     # 1.234,56
 _COMMA_DECIMAL = re.compile(r"^\d+,\d+$")                # 3,14  (not exactly 3 decimals)
+_BRACKET_MINUS = re.compile(r"^\(\s*[-−–]\s*\)\s*(.+)$")  # (-) 100.000
 
 
 def parse_number(text: str):
     """Return an int/float for a number written in a common format, else None.
 
-    Handled: 1200, 1,200, 1,200.50, 1 234,56, 1.234,56, 3,14, -5, (120) = -120,
+    Handled: 1200, 1,200, 1,200.50, 1 234,56, 1.234,56, 3,14, -5, (120) = -120, (-) 100 = -100,
     and a leading/trailing currency sign ($ EUR GBP).
     NOT handled on purpose: percentages ("12%") and text with units ("5 TND"): they stay text.
     Ambiguity: "1,500" is read as one thousand five hundred (comma + exactly 3 digits = thousands).
@@ -43,6 +44,10 @@ def parse_number(text: str):
     if s.startswith("(") and s.endswith(")"):
         negative, s = True, s[1:-1].strip()
     s = _CURRENCY.sub("", s).strip()
+    # accounting style "(-) 100.000" / "(-)100.000" / "(–) 100": a minus sign inside brackets
+    bracket_minus = _BRACKET_MINUS.match(s)
+    if bracket_minus:
+        negative, s = True, _CURRENCY.sub("", bracket_minus.group(1)).strip()
     if s[:1] in "-−":
         negative, s = True, s[1:].strip()
     elif s[:1] == "+":
@@ -99,7 +104,7 @@ def flatten_columns(columns) -> list[str]:
 
 # ------------------------------------------------------------ table contract
 def dataframe_to_contract(df: pd.DataFrame, doc_id: str, page: int, index: int) -> dict:
-    """Build the JSON dict that Members 2, 3 and 4 consume.
+    """Build the JSON dict that the harness, the Q&A layer and the automation consume.
 
     {
       "doc_id": "report1", "table_id": "report1_p3_t1", "page": 3,

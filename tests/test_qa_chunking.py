@@ -1,4 +1,4 @@
-"""Member 3 chunking tests: metadata, verdict status, splitting, fallback behaviour."""
+"""Chunking tests: metadata, verdict status, splitting, fallback behaviour."""
 from pathlib import Path
 
 from harness.models import TableResult

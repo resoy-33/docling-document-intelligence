@@ -1,6 +1,6 @@
 """Load an engine output folder into the objects used by retrieval and Q&A.
 
-Expected layout (written by Member 1, validated by Member 2):
+Expected layout (written by the engine, validated by the harness):
 
     output/<doc_id>/summary.json
     output/<doc_id>/<doc_id>.md
@@ -175,7 +175,3 @@ def load_corpus(
     corpus.index = BM25Index(corpus.chunks)
     return corpus
 
-
-def empty_corpus(root: str | Path) -> Corpus:
-    """Convenience for tests and for an API started before any conversion."""
-    return Corpus(root=Path(root), index=BM25Index([]))

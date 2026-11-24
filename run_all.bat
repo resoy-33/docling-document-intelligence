@@ -1,18 +1,16 @@
 @echo off
-REM Runs the whole Member 1 pipeline: Docling engine + pdfplumber baseline + comparison report.
+REM Docling engine -> harness gate -> pdfplumber baseline -> harness on the baseline -> comparison report.
 cd /d "%~dp0"
-if not exist ".venv\Scripts\activate.bat" (
-  echo ERROR: run setup_windows.bat first.
-  pause
-  exit /b 1
-)
-call ".venv\Scripts\activate.bat"
-echo === 1/3 Docling engine on samples\ (first run downloads models: be patient) ===
+call ".venv\Scripts\activate.bat" || (echo Run setup.bat full first. & pause & exit /b 1)
+echo === 1/5 Docling engine on samples\ (first run downloads models) ===
 python -m engine.convert samples --out output
-echo === 2/3 pdfplumber baseline ===
-python compare_pdfplumber.py samples --out output_baseline
-echo === 3/3 Comparison report ===
-python compare_report.py
-echo.
+echo === 2/5 Harness on Docling output ===
+python -m harness.validate output
+echo === 3/5 pdfplumber baseline ===
+python -m baseline.compare_pdfplumber samples --out output_baseline
+echo === 4/5 Harness on baseline output ===
+python -m harness.validate output_baseline
+echo === 5/5 Comparison report ===
+python -m baseline.compare_report
 echo Results: output\  output_baseline\  comparison_report.md
 pause

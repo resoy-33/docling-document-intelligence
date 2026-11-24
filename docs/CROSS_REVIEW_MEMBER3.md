@@ -6,6 +6,25 @@ Method: read the code, ran the test suite, ran the CLI on the committed demo cor
 exercised the API against hand-written output. No Docling model was installed on this
 machine, so Docling-only paths were not executed (they are marked below).
 
+> **Status update (2026-11-24).** The review below is kept unchanged as the record of 2026-11-22.
+> Since then the findings were re-checked on Windows, Python 3.12, Docling 2.151.1:
+>
+> | Finding | Status now |
+> |---|---|
+> | Engine #1 (export error aborts the batch) | **Fixed**: `process_file` catches export errors, writes a `failed` summary and continues (`engine/convert.py`) |
+> | Engine #2 (stale test count) | **Fixed**: full suite now `149 passed, 0 skipped` with Docling installed |
+> | Engine #4 (`run_all.bat` skips the harness) | **Fixed**: `run_all.bat` validates both `output/` and `output_baseline/` |
+> | Engine #5 (missing Docling shown as `failed`) | Unchanged in the CLI; the API still returns a clear HTTP 503 |
+> | Engine #6 (`--vlm`) | Still **not executed**; only the plan logic is tested |
+> | Engine #7 (`.docling.json` reload) | **Verified**: real API run on Docling output reports `chunking_method: hybrid` for every document |
+> | Harness #1 (strict empty cells) | Unchanged on purpose (strict gate) |
+> | Harness #2 (missing folder traceback) | **Fixed**: the CLI prints `Not a folder: ...` |
+> | Remaining risks 1 and 2 (HybridChunker, real tables through the API) | **Done**: real output through `/ask`: `sample_simple_table` answered (1250, page 1), `sample_wrong_total` refused |
+>
+> Script names changed: `setup_windows.bat` / `setup_member3.bat` → `setup.bat full` / `setup.bat`,
+> `run_demo_api.bat` → `run_api.bat demo`, `run_member3_tests.bat` → `run_tests.bat`,
+> `compare_*.py` → `baseline/`.
+
 ## Verification log
 
 | Command | Result |

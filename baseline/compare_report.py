@@ -1,11 +1,11 @@
 """Count the tables each extractor found, per PDF, and write a small Markdown report.
 
-    python compare_report.py                      # uses samples/, output/, output_baseline/
+    python -m baseline.compare_report                      # uses samples/, output/, output_baseline/
 
 It only COUNTS tables (found vs. not found). Whether a table is CORRECT is decided by the
-verification harness (Member 2). Run it after:
+verification harness (harness). Run it after:
     python -m engine.convert samples --out output
-    python compare_pdfplumber.py samples --out output_baseline
+    python -m baseline.compare_pdfplumber samples --out output_baseline
 """
 import argparse
 from pathlib import Path

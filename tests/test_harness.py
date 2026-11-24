@@ -3,7 +3,7 @@
 Ground truth = good tables (must pass) and deliberately corrupted ones (must fail
 for the RIGHT reason). Run from the project root:  python -m pytest -q
 
-Fixtures: the 5 JSON files of Member 1 must be in tests/fixtures/ (or fixtures/).
+Fixtures: the 5 JSON files of the engine must be in tests/fixtures/ (or fixtures/).
 """
 import copy
 import json
@@ -44,7 +44,7 @@ def codes(report) -> list[str]:
     return [f.code.value for f in report.failures]
 
 
-# ------------------------------------------------------------- Member 1 fixtures
+# ------------------------------------------------------------- the engine fixtures
 @pytest.mark.parametrize("name", ["good_table_1", "good_table_2"])
 def test_good_fixtures_pass(name):
     report = validate_file(FIXTURES / f"{name}.json")
@@ -202,3 +202,21 @@ def test_report_is_json_serialisable(tmp_path):
     data = json.loads(validate_directory(tmp_path).model_dump_json())
     assert data["pass_rate_docs"] == 0.25
     assert data["reports"][0]["passed"] in (True, False)
+
+
+# ------------------------------------------------------- 1-column safeguard
+def test_one_column_with_a_merged_text_block_is_flagged():
+    """Real case: Docling read a scanned invoice as ONE cell holding the whole page."""
+    block = "Bill To Rob & Joe Traders " * 20  # > 300 characters
+    report = validate_table(make(columns=["0"], rows=[[block]]))
+    assert not report.passed and codes(report) == ["MERGED_LAYOUT"]
+
+
+def test_legitimate_one_column_list_passes_with_a_warning():
+    report = validate_table(make(columns=["Name"], rows=[["Sara"], ["Ali"], ["Mona"]]))
+    assert report.passed and report.failures == []
+    assert report.warnings and "only 1 column" in report.warnings[0]
+
+
+def test_normal_tables_have_no_warning():
+    assert validate_table(make()).warnings == []

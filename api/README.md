@@ -1,12 +1,12 @@
-# Member 3 — FastAPI service (`api/`)
+# FastAPI service (`api/`)
 
 Three required endpoints plus integration helpers:
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/convert` | upload a PDF/DOCX/... and run Member 1's Docling engine (multipart) |
+| `POST` | `/convert` | upload a PDF/DOCX/... and run the engine's Docling engine (multipart) |
 | `POST` | `/convert/path` | same conversion for a file already on the server (JSON; for n8n/watch-folder) |
-| `GET` | `/tables/{table_id}` | one table + Member 2 verdict + `usable` flag |
+| `GET` | `/tables/{table_id}` | one table + the harness verdict + `usable` flag |
 | `POST` | `/ask` | grounded answer, or a refusal with the reason |
 | `GET` | `/tables` | list/filter tables (`?doc_id=...&passed=true`) |
 | `GET` | `/documents` | document status, pass counts, chunking method |
@@ -20,11 +20,11 @@ Interactive OpenAPI page: **http://127.0.0.1:8000/docs**
 ## Run on the demo output (no Docling download)
 
 ```bat
-setup_member3.bat
-run_demo_api.bat
+setup.bat
+run_api.bat demo
 ```
 
-`run_demo_api.bat` sets `DOCLING_OUTPUT_DIR=demo\docs` and starts uvicorn on port 8000.
+`run_api.bat demo` sets `DOCLING_OUTPUT_DIR=demo\docs` and starts uvicorn on port 8000.
 
 Manual commands:
 
@@ -89,7 +89,7 @@ Expected refusal (still HTTP 200):
 }
 ```
 
-Convert a file already on the server (best for Member 4's automation):
+Convert a file already on the server (best for the automation):
 
 ```powershell
 curl.exe -s -X POST http://127.0.0.1:8000/convert/path `
@@ -131,7 +131,7 @@ Response fields:
 | `retrieved_chunk_ids` | evidence trail for the slides/demo |
 | `method` | `extractive` or `llm+grounding-check` |
 
-`refused: true` is a **successful** refusal, not an HTTP error. Member 4 should display
+`refused: true` is a **successful** refusal, not an HTTP error. The automation should display
 the answer and the warning.
 
 ## Error codes
@@ -144,7 +144,7 @@ the answer and the warning.
 | `503` | `/convert` called while Docling is not installed |
 | `500` | unexpected conversion crash (the engine's per-file failures are returned as `status: "failed"` with HTTP 200) |
 
-## Integration notes for Member 4
+## Integration notes for the automation
 
 * **Watch-folder:** when a new PDF appears, call `POST /convert/path` with
   `{"path": "C:/.../file.pdf"}`. The response contains `summary.status`
@@ -165,8 +165,8 @@ Covers health, documents, table filters, table verdict/usability, grounded ask, 
 request validation, `/validate`, `/reload`, 503 without Docling, `/convert` with a fake
 engine, `/convert/path`, unsupported extensions, and missing input.
 
-On 2026-11-22: whole project suite `119 passed, 2 skipped` (the 2 skips are Docling-only
-tests from Member 1). A real uvicorn server was also started on `127.0.0.1:8010` and
+Whole project suite: `127 passed, 2 skipped` (the 2 skips are Docling-only
+tests from the engine). A real uvicorn server was also started on `127.0.0.1:8010` and
 checked with HTTP requests for `/health`, `/ask`, `/tables/{id}`, `/validate` and
 `/openapi.json`.
 

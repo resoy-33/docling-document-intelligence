@@ -1,10 +1,17 @@
-docling==2.151.1
+# Full install (real Docling, ~5 GB of models on first run)
+docling==2.151.1   # verify with: pip index versions docling
 pandas
-reportlab
-pdfplumber
-pytest
+openpyxl
 pydantic>=2
+pdfplumber
+reportlab
+pypdfium2
+pillow
+streamlit>=1.50   # inspector uses st.image(width="stretch")
 fastapi
 uvicorn
 httpx
 python-multipart
+requests
+watchdog
+pytest

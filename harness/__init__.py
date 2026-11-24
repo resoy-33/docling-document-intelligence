@@ -1,4 +1,4 @@
-"""Verification harness: deterministic checksum rules on extracted tables (Member 2).
+"""Verification harness: deterministic checksum rules on extracted tables (harness).
 
 I/O functions live in harness.validate (python -m harness.validate <folder>).
 """

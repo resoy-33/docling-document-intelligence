@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pandas as pd
 
 from engine import convert as engine
-from compare_report import build_report, count_tables
+from baseline.compare_report import build_report, count_tables
 
 
 class FakeTable:
@@ -87,3 +87,17 @@ def test_compare_report_counts(tmp_path):
     report = build_report(samples, d, b)
     assert "| `a.pdf` | 1 | 1 |" in report
     assert "| `b.pdf` | 0 | not run |" in report
+
+
+def test_export_error_in_one_file_does_not_abort(tmp_path, monkeypatch):
+    """An exception while writing outputs becomes a 'failed' summary instead of crashing the batch."""
+    class BrokenDoc(FakeDoc):
+        def export_to_markdown(self):
+            raise RuntimeError("boom")
+
+    class BrokenConverter(FakeConverter):
+        def convert(self, path):
+            return SimpleNamespace(document=BrokenDoc([FakeTable(1, [["A", "1", "1"]])]))
+
+    summary = engine.process_file(tmp_path / "x.pdf", tmp_path / "out", ["fast"], lambda m: BrokenConverter([]))
+    assert summary["status"] == "failed" and "export failed" in summary["error"]

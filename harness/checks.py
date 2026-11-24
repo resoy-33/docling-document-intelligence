@@ -8,6 +8,9 @@ Rules
   numeric_cells    no text inside a numeric column (a mis-read number such as "1 2OO")
   row_totals       for each row: sum of the value cells == the cell of the "Total" column
   column_totals    for each column: sum of the data rows == the cell of the "Total" row
+  single_column    a 1-column table whose cell holds a long text block (OCR/layout merged a whole
+                   page region into one cell) FAILS with MERGED_LAYOUT; any other 1-column table
+                   passes with a warning (a simple list is legitimate, but nothing can be cross-checked)
 
 How totals are found
   Total row     the LAST row whose first cell is a total label ("Total", "Totale", "Totaux", ...)
@@ -35,6 +38,10 @@ CHECK_EMPTY_CELLS = "empty_cells"
 CHECK_NUMERIC_CELLS = "numeric_cells"
 CHECK_ROW_TOTALS = "row_totals"
 CHECK_COLUMN_TOTALS = "column_totals"
+CHECK_SINGLE_COLUMN = "single_column"
+
+MERGED_CELL_CHARS = 300   # a normal table cell is far shorter than this
+MERGED_CELL_LINES = 5     # ... and does not contain 5 line breaks
 
 
 # ------------------------------------------------------------------ helpers
@@ -111,6 +118,24 @@ def check_empty_cells(table: TableResult) -> list[Failure]:
     return failures
 
 
+def check_single_column(table: TableResult) -> tuple[list[Failure], list[str]]:
+    """Safeguard for suspicious 1-column tables. Returns (failures, warnings)."""
+    if len(table.columns) != 1:
+        return [], []
+    for i, row in enumerate(table.rows):
+        for value in row:
+            if isinstance(value, str) and (
+                len(value) > MERGED_CELL_CHARS or value.count("\n") >= MERGED_CELL_LINES
+            ):
+                return [Failure(
+                    code=FailureCode.MERGED_LAYOUT, row=i, col=0,
+                    message=f"1-column table whose row {i + 1} holds a text block of {len(value)} "
+                            "characters: the layout model probably merged a page region into one "
+                            "cell, this is not a real table",
+                )], []
+    return [], ["only 1 column: the structure looks valid but no number can be cross-checked"]
+
+
 def check_totals(
     table: TableResult, tol: float = DEFAULT_TOL, require_totals: bool = False
 ) -> tuple[list[Failure], list[str]]:
@@ -185,12 +210,14 @@ def validate_table(
 ) -> ValidationReport:
     """Run every rule on one table and return the pass/fail verdict with all reasons."""
     failures = check_column_count(table) + check_empty_cells(table)
-    checks = [CHECK_COLUMN_COUNT, CHECK_EMPTY_CELLS]
+    single_failures, warnings = check_single_column(table)
+    checks = [CHECK_COLUMN_COUNT, CHECK_EMPTY_CELLS, CHECK_SINGLE_COLUMN]
     total_failures, ran = check_totals(table, tol=tol, require_totals=require_totals)
     return ValidationReport(
         doc_id=table.doc_id,
         table_id=table.table_id,
         page=table.page,
-        failures=failures + total_failures,
+        failures=failures + single_failures + total_failures,
+        warnings=warnings,
         checks_run=checks + ran,
     )

@@ -7,5 +7,5 @@
   "table_ids": [
     "broken_budget_p2_t1"
   ],
-  "note": "Hand-written demo data for Member 3 (API/Q&A). Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`."
+  "note": "Hand-written demo data for the API/Q&A tests. Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`."
 }

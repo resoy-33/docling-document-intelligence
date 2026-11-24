@@ -1,9 +1,9 @@
 """Baseline for the comparison matrix: extract tables with pdfplumber and write
 them in the SAME contract format as the Docling engine.
 
-    python compare_pdfplumber.py samples/ --out output_baseline
+    python -m baseline.compare_pdfplumber samples/ --out output_baseline
 
-Then Member 2's validator can be run on both output/ (Docling) and
+Then the validator can be run on both output/ (Docling) and
 output_baseline/ (pdfplumber) to get a real, reproducible pass rate.
 """
 import argparse

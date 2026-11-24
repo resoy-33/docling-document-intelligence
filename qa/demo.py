@@ -1,4 +1,4 @@
-"""Command-line demo for Member 3 (no server needed).
+"""Command-line demo (no server needed).
 
     python -m qa.demo --root demo/docs --question "What were Laptops sales in Q1?"
     python -m qa.demo --root demo/docs --list

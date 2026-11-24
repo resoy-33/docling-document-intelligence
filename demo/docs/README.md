@@ -1,6 +1,6 @@
 # Demo output (hand-written, not Docling)
 
-Hand-written demo data for Member 3 (API/Q&A). Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`.
+Hand-written demo data for the API/Q&A tests. Not produced by Docling. Real engine output comes from `python -m engine.convert samples --out output`.
 
 | Document | Status | Table | Expected verdict |
 |---|---|---|---|

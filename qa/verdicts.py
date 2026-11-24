@@ -1,4 +1,4 @@
-"""Bridge between Member 2's harness and Member 3's Q&A.
+"""Bridge between the harness and the Q&A layer.
 
 Important design choice: the verdict is always **recomputed** with the deterministic
 harness (`harness.validate_file`) instead of trusting a saved JSON report.  A saved
@@ -27,6 +27,7 @@ def verdict_from_report(report: ValidationReport) -> TableVerdict:
         verifiable=report.verifiable,
         codes=codes,
         reason=reason,
+        warnings=list(report.warnings),
     )
 
 

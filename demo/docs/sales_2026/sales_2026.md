@@ -1,7 +1,7 @@
 <!-- page: 1 -->
 # 2026 Sales Review
 
-This synthetic report is used only to demonstrate Member 3's chunking and grounded Q&A.
+This synthetic report is used only to demonstrate the chunking and grounded Q&A.
 The quarterly table is stored as a contract table in `tables/`.
 
 <!-- page: 2 -->
